@@ -1,0 +1,11 @@
+MongoFs is a Dokany app that mounts mongodb's content as filesystem.
+
+/ -- lists databases
+
+/database -- lists collections in 'database' database.
+
+/database/collection -- shows meta information about 'collection' collection
+    stats.json
+    indexes.json
+    
+    

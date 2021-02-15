@@ -1,0 +1,33 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26124.0
+MinimumVisualStudioVersion = 15.0.26124.0
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MongoFs", "MongoFs\MongoFs.csproj", "{12857C0C-24AF-414F-8C24-97B9EA962CEC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{41FEB92B-5B2A-4C7F-868A-3E6E2B4EFABD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestMongoFs", "Tests\TestMongoFs\TestMongoFs.csproj", "{00AFBE43-DF0C-4C8C-B0F5-69BF18F96893}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{12857C0C-24AF-414F-8C24-97B9EA962CEC}.Debug|x64.ActiveCfg = Debug|x64
+		{12857C0C-24AF-414F-8C24-97B9EA962CEC}.Debug|x64.Build.0 = Debug|x64
+		{12857C0C-24AF-414F-8C24-97B9EA962CEC}.Release|x64.ActiveCfg = Release|x64
+		{12857C0C-24AF-414F-8C24-97B9EA962CEC}.Release|x64.Build.0 = Release|x64
+		{00AFBE43-DF0C-4C8C-B0F5-69BF18F96893}.Debug|x64.ActiveCfg = Debug|x64
+		{00AFBE43-DF0C-4C8C-B0F5-69BF18F96893}.Debug|x64.Build.0 = Debug|x64
+		{00AFBE43-DF0C-4C8C-B0F5-69BF18F96893}.Release|x64.ActiveCfg = Release|x64
+		{00AFBE43-DF0C-4C8C-B0F5-69BF18F96893}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{00AFBE43-DF0C-4C8C-B0F5-69BF18F96893} = {41FEB92B-5B2A-4C7F-868A-3E6E2B4EFABD}
+	EndGlobalSection
+EndGlobal
