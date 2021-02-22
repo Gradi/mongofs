@@ -10,6 +10,8 @@ namespace MongoFs.Paths
 {
     public class PathParser : IPathParser
     {
+        private const string BadDbColl = "Invalid database or collection name.";
+
         private readonly ILogger _logger;
         private readonly char _directorySeparator;
 
@@ -31,6 +33,8 @@ namespace MongoFs.Paths
         {
             if (string.IsNullOrEmpty(pathStr))
                 return LogFailure(pathStr, "Path is null or empty.");
+            if (pathStr[0] != _directorySeparator)
+                return LogFailure(pathStr, "Path is not absolute.");
 
             if (pathStr.Length == 1 && pathStr[0] == _directorySeparator)
                 return new RootPath();
@@ -44,23 +48,40 @@ namespace MongoFs.Paths
 
         // /database
         private Path? ParseDatabasePath(string inputStr, string database) =>
-            database.IsValidDbOrCollName() ? new DatabasePath(database) : LogFailure(inputStr, "Invalid database name");
+            database.IsValidDbOrCollName() ? new DatabasePath(database) : LogFailure(inputStr, "Invalid database name.");
 
         // /database/collection
         private Path? ParseCollectionPath(string inputStr, string database, string collection) =>
             database.IsValidDbOrCollName() && collection.IsValidDbOrCollName() ?
-                new CollectionPath(database, collection) : LogFailure(inputStr, "Invalid database or collection name.");
+                new CollectionPath(database, collection) : LogFailure(inputStr, BadDbColl);
 
         // /database/collection/<something>
         private Path? Parse3SegmentsPath(string inputStr, string database, string collection, string segment)
         {
             if (!database.IsValidDbOrCollName() || !collection.IsValidDbOrCollName())
-                return LogFailure(inputStr, "Invalid database or collection name");
+                return LogFailure(inputStr, BadDbColl);
 
             return segment switch
             {
                 StatsPath.FileName => new StatsPath(database, collection),
                 IndexesPath.FileName => new IndexesPath(database, collection),
+                DataDirectoryPath.FileName => new DataDirectoryPath(database, collection),
+                _ => LogFailure(inputStr)
+            };
+        }
+
+        // /database/collection/
+        //     data/<numeric-index>.[bson|json]
+        private Path? Parse4SegmentsPath(string inputStr, string database, string collection, string thirdSegment, string fourthSegment)
+        {
+            if (!database.IsValidDbOrCollName() || !collection.IsValidDbOrCollName())
+                return LogFailure(inputStr, BadDbColl);
+
+            return thirdSegment switch
+            {
+                DataDirectoryPath.FileName when fourthSegment.IsValidDocumentIndex(out var index, out var type) =>
+                    new DataDocumentPath(database, collection, index, type),
+
                 _ => LogFailure(inputStr)
             };
         }

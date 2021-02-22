@@ -7,5 +7,7 @@ MongoFs is a Dokany app that mounts mongodb's content as filesystem.
 /database/collection -- shows meta information about 'collection' collection
     stats.json
     indexes.json
-    
-    
+    data/
+    data/[0-9]+\.[bson|json]
+
+

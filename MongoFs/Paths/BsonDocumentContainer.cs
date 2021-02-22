@@ -4,21 +4,28 @@ using System.Text;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace MongoFs.Paths
 {
     public class BsonDocumentContainer
     {
+        private static readonly JsonWriterSettings JsonWriterSettings;
+
         public BsonDocument BsonDocument { get; }
+
+        static BsonDocumentContainer()
+        {
+            JsonWriterSettings = JsonWriterSettings.Defaults.Clone();
+            JsonWriterSettings.Indent = true;
+            JsonWriterSettings.IndentChars = "    ";
+        }
 
         public BsonDocumentContainer(BsonDocument document)
         {
             BsonDocument = document ?? throw new ArgumentNullException(nameof(document));
         }
 
-        public string AsJsonString() => JObject.Parse(BsonDocument.ToJson()).ToString(Formatting.Indented);
+        public string AsJsonString() => BsonDocument.ToJson(JsonWriterSettings);
 
         public byte[] AsJsonBytes() => Encoding.UTF8.GetBytes(AsJsonString());
 

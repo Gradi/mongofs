@@ -20,9 +20,10 @@ namespace MongoFs.Handlers
             bytesRead = 0;
             return path switch
             {
-                IndexesPath p => ReadFile(p, buffer, out bytesRead, offset),
-                StatsPath p => ReadFile(p, buffer, out bytesRead, offset),
-                var p => LogFailure(p)
+                IndexesPath p      => ReadFile(p, buffer, out bytesRead, offset),
+                StatsPath p        => ReadFile(p, buffer, out bytesRead, offset),
+                DataDocumentPath p => ReadFile(p, buffer, out bytesRead, offset),
+                var p              => LogFailure(p)
             };
         }
 
@@ -31,6 +32,24 @@ namespace MongoFs.Handlers
 
         private NtStatus ReadFile(StatsPath path, byte[] buffer, out int bytesRead, long offset) =>
             ReadBuffer(_mongoDb.GetStats(path.Database, path.Collection).AsJsonBytes(), buffer, out bytesRead, offset);
+
+        private NtStatus ReadFile(DataDocumentPath path, byte[] buffer, out int bytesRead, long offset)
+        {
+            var document = _mongoDb.GetDocumentAt(path.Database, path.Collection, path.Index);
+            if (document == null)
+            {
+                bytesRead = 0;
+                return NtStatus.NoSuchFile;
+            }
+
+            var sourceBytes = path.Type switch
+            {
+                DataDocumentType.Json => document.AsJsonBytes(),
+                DataDocumentType.Bson => document.AsBsonBytes(),
+                _ => throw new ArgumentOutOfRangeException($"Unsupported path type {path.Type}.")
+            };
+            return ReadBuffer(sourceBytes, buffer, out bytesRead, offset);
+        }
 
         private NtStatus ReadBuffer(byte[] source, byte[] destination, out int bytesRead, long offset)
         {

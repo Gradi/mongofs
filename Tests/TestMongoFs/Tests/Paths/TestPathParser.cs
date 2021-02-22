@@ -17,6 +17,7 @@ namespace TestMongoFs.Tests.Paths
 
         [TestCase(null, ExpectedResult = null)]
         [TestCase("", ExpectedResult = null)]
+        [TestCase("something", ExpectedResult = null)]
         public Path? InvalidInputs(string? input) => _parser.Parse(input);
 
         [Test]
@@ -25,18 +26,17 @@ namespace TestMongoFs.Tests.Paths
         [Test]
         public void TestDatabasePath()
         {
-            var name = TestContext.CurrentContext.Random.GetString();
+            var (database, _) = GenRandomDbColl();
 
-            void Check(DatabasePath db) => Assert.That(db.Database, Is.EqualTo(name));
-            AssertResult<DatabasePath>($"/{name}", Check);
-            AssertResult<DatabasePath>($"/{name}/", Check);
+            void Check(DatabasePath db) => Assert.That(db.Database, Is.EqualTo(database));
+            AssertResult<DatabasePath>($"/{database}", Check);
+            AssertResult<DatabasePath>($"/{database}/", Check);
         }
 
         [Test]
         public void TestCollectionPath()
         {
-            var db = TestContext.CurrentContext.Random.GetString();
-            var collection = TestContext.CurrentContext.Random.GetString();
+            var (db, collection) = GenRandomDbColl();
 
             void Check(CollectionPath coll)
             {
@@ -50,10 +50,10 @@ namespace TestMongoFs.Tests.Paths
 
         [TestCase("stats.json", typeof(StatsPath))]
         [TestCase("indexes.json", typeof(IndexesPath))]
+        [TestCase("data", typeof(DataDirectoryPath))]
         public void TestSimple3SegmentsPaths(string lastSegment, Type expectedType)
         {
-            var db = TestContext.CurrentContext.Random.GetString();
-            var collection = TestContext.CurrentContext.Random.GetString();
+            var (db, collection) = GenRandomDbColl();
 
             void Check(object? result)
             {
@@ -66,11 +66,33 @@ namespace TestMongoFs.Tests.Paths
             Check(_parser.Parse($"/{db}/{collection}/{lastSegment}/"));
         }
 
+        [Test]
+        public void TestDataDocumentPath()
+        {
+            var (db, coll) = GenRandomDbColl();
+            long index = TestContext.CurrentContext.Random.NextLong(1000);
+
+            void Check(Path? path, DataDocumentType expectedType)
+            {
+                Assert.That(path, Is.TypeOf<DataDocumentPath>());
+                var doc = (DataDocumentPath)path!;
+                Assert.That(doc.Database, Is.EqualTo(db));
+                Assert.That(doc.Collection, Is.EqualTo(coll));
+                Assert.That(doc.Index, Is.EqualTo(index));
+                Assert.That(doc.Type, Is.EqualTo(expectedType));
+            }
+            Check(_parser.Parse($"/{db}/{coll}/data/{index}.json"), DataDocumentType.Json);
+            Check(_parser.Parse($"/{db}/{coll}/data/{index}.bson"), DataDocumentType.Bson);
+        }
+
         private void AssertResult<T>(string? input, Action<T> action) where T : Path
         {
             var result = _parser.Parse(input);
             Assert.That(result, Is.TypeOf<T>());
             action((T)result!);
         }
+
+        private (string Database, string Collection) GenRandomDbColl() =>
+            (TestContext.CurrentContext.Random.GetString(), TestContext.CurrentContext.Random.GetString());
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using DokanNet;
+using MongoFs.Extensions;
 using MongoFs.Paths;
 using Serilog;
 using Path = MongoFs.Paths.Path;
@@ -22,14 +23,18 @@ namespace MongoFs.Handlers
             fileInfo = default;
             return path switch
             {
-                RootPath p => GetFileInformation(p, out fileInfo),
-                DatabasePath p => GetFileInformation(p, out fileInfo),
-                CollectionPath p => GetFileInformation(p, out fileInfo),
+                // Dirs
+                RootPath p           => GetFileInformation(p, out fileInfo),
+                DatabasePath p       => GetFileInformation(p, out fileInfo),
+                CollectionPath p     => GetFileInformation(p, out fileInfo),
+                DataDirectoryPath p  => GetFileInformation(p, out fileInfo),
 
-                StatsPath p => GetFileInformation(p, out fileInfo),
-                IndexesPath p => GetFileInformation(p, out fileInfo),
+                // Files
+                StatsPath p          => GetFileInformation(p, out fileInfo),
+                IndexesPath p        => GetFileInformation(p, out fileInfo),
+                DataDocumentPath p   => GetFileInformation(p, out fileInfo),
 
-                var p => LogFailure(p)
+                var p                => LogFailure(p)
             };
         }
 
@@ -40,7 +45,6 @@ namespace MongoFs.Handlers
                 FileName = System.IO.Path.DirectorySeparatorChar.ToString(),
                 Attributes = FileAttributes.Directory | FileAttributes.ReadOnly,
                 CreationTime = DateTime.Now,
-                Length = _mongoDb.GetTotalDbSize()
             };
             return NtStatus.Success;
         }
@@ -52,7 +56,6 @@ namespace MongoFs.Handlers
                 FileName = path.Database,
                 Attributes = FileAttributes.Directory | FileAttributes.ReadOnly,
                 CreationTime = DateTime.Now,
-                Length = _mongoDb.GetDatabaseSize(path.Database)
             };
             return NtStatus.Success;
         }
@@ -64,7 +67,6 @@ namespace MongoFs.Handlers
                 FileName = path.Collection,
                 Attributes = FileAttributes.Directory | FileAttributes.ReadOnly,
                 CreationTime = DateTime.Now,
-                Length = _mongoDb.GetCollectionSize(path.Database, path.Collection)
             };
             return NtStatus.Success;
         }
@@ -89,6 +91,41 @@ namespace MongoFs.Handlers
                 Attributes = FileAttributes.Normal | FileAttributes.ReadOnly,
                 CreationTime = DateTime.Now,
                 Length = _mongoDb.GetIndexes(path.Database, path.Collection).GetJsonBytesLength()
+            };
+            return NtStatus.Success;
+        }
+
+        private NtStatus GetFileInformation(DataDirectoryPath path, out FileInformation fileInfo)
+        {
+            fileInfo = new FileInformation
+            {
+                FileName = DataDirectoryPath.FileName,
+                Attributes = FileAttributes.Directory | FileAttributes.ReadOnly,
+                CreationTime = DateTime.Now,
+            };
+            return NtStatus.Success;
+        }
+
+        private NtStatus GetFileInformation(DataDocumentPath path, out FileInformation fileInfo)
+        {
+            var document = _mongoDb.GetDocumentAt(path.Database, path.Collection, path.Index);
+            if (document == null)
+            {
+                fileInfo = default;
+                return NtStatus.NoSuchFile;
+            }
+
+            fileInfo = new FileInformation
+            {
+                FileName = path.FileName,
+                Attributes = FileAttributes.Normal | FileAttributes.ReadOnly,
+                CreationTime = document.BsonDocument.TryGetCreationTimeFromId() ?? DateTime.Now,
+                Length = path.Type switch
+                {
+                    DataDocumentType.Json => document.GetJsonBytesLength(),
+                    DataDocumentType.Bson => document.GetBsonBytesLength(),
+                    _ => throw new ArgumentOutOfRangeException($"Unsupported path type {path.Type}")
+                }
             };
             return NtStatus.Success;
         }
