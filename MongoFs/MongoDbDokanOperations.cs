@@ -54,7 +54,8 @@ namespace MongoFs
                 (access & FileAccess.Execute) == FileAccess.Execute ||
                 (access & FileAccess.ReadAttributes) == FileAccess.ReadAttributes ||
                 (access & FileAccess.GenericExecute) == FileAccess.GenericExecute ||
-                (access & FileAccess.GenericRead) == FileAccess.GenericRead)
+                (access & FileAccess.GenericRead) == FileAccess.GenericRead ||
+                (access & FileAccess.Synchronize) == FileAccess.Synchronize)
             {
                 return NtStatus.Success;
             }

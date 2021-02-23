@@ -96,7 +96,7 @@ namespace MongoFs.Handlers
 
         private NtStatus ReadBuffer(byte[] source, byte[] destination, out int bytesRead, long offset)
         {
-            if (offset >= source.Length)
+            if (offset > source.Length)
             {
                 _logger.Debug("Request to read bytes at {Offset} offset, but source array's length is less than offset ({SourceLength}).",
                     offset, source.Length);
