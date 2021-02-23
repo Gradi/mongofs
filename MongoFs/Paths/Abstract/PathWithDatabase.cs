@@ -1,6 +1,6 @@
 using System;
 
-namespace MongoFs.Paths
+namespace MongoFs.Paths.Abstract
 {
     public abstract class PathWithDatabase : Path
     {

@@ -1,4 +1,6 @@
-namespace MongoFs.Paths
+using MongoFs.Paths.Abstract;
+
+namespace MongoFs.Paths.Root.Database.Collection.Data
 {
     public sealed class DataDocumentPath : PathWithCollection
     {

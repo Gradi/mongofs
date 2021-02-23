@@ -1,10 +1,17 @@
-using System;
-using System.IO;
 using DokanNet;
+using MongoDB.Bson;
 using MongoFs.Extensions;
+using MongoFs.Paths.Root.Database.Collection.Data;
+using MongoFs.Paths.Root.Database.Collection.Query;
+using MongoFs.Paths.Root.Database.Collection;
+using MongoFs.Paths.Root.Database;
+using MongoFs.Paths.Root;
 using MongoFs.Paths;
 using Serilog;
-using Path = MongoFs.Paths.Path;
+using System.Linq;
+using System.Text;
+using System;
+using Path = MongoFs.Paths.Abstract.Path;
 
 namespace MongoFs.Handlers
 {
@@ -24,15 +31,19 @@ namespace MongoFs.Handlers
             return path switch
             {
                 // Dirs
-                RootPath p           => GetFileInformation(p, out fileInfo),
-                DatabasePath p       => GetFileInformation(p, out fileInfo),
-                CollectionPath p     => GetFileInformation(p, out fileInfo),
-                DataDirectoryPath p  => GetFileInformation(p, out fileInfo),
+                RootPath p                => GetFileInformation(p, out fileInfo),
+                DatabasePath p            => GetFileInformation(p, out fileInfo),
+                CollectionPath p          => GetFileInformation(p, out fileInfo),
+                DataDirectoryPath p       => GetFileInformation(p, out fileInfo),
+                QueryDirectoryPath p      => GetFileInformation(p, out fileInfo),
+                QueryEmptyDirectoryPath p => GetFileInformation(p, out fileInfo),
 
                 // Files
-                StatsPath p          => GetFileInformation(p, out fileInfo),
-                IndexesPath p        => GetFileInformation(p, out fileInfo),
-                DataDocumentPath p   => GetFileInformation(p, out fileInfo),
+                StatsPath p               => GetFileInformation(p, out fileInfo),
+                IndexesPath p             => GetFileInformation(p, out fileInfo),
+                DataDocumentPath p        => GetFileInformation(p, out fileInfo),
+                QueryDocumentPath p       => GetFileInformation(p, out fileInfo),
+                QueryAllDocumentsPath p   => GetFileInformation(p, out fileInfo),
 
                 var p                => LogFailure(p)
             };
@@ -43,7 +54,7 @@ namespace MongoFs.Handlers
             fileInfo = new FileInformation
             {
                 FileName = System.IO.Path.DirectorySeparatorChar.ToString(),
-                Attributes = FileAttributes.Directory | FileAttributes.ReadOnly,
+                Attributes = MongoDir,
                 CreationTime = DateTime.Now,
             };
             return NtStatus.Success;
@@ -54,7 +65,7 @@ namespace MongoFs.Handlers
             fileInfo = new FileInformation
             {
                 FileName = path.Database,
-                Attributes = FileAttributes.Directory | FileAttributes.ReadOnly,
+                Attributes = MongoDir,
                 CreationTime = DateTime.Now,
             };
             return NtStatus.Success;
@@ -65,7 +76,7 @@ namespace MongoFs.Handlers
             fileInfo = new FileInformation
             {
                 FileName = path.Collection,
-                Attributes = FileAttributes.Directory | FileAttributes.ReadOnly,
+                Attributes = MongoDir,
                 CreationTime = DateTime.Now,
             };
             return NtStatus.Success;
@@ -76,7 +87,7 @@ namespace MongoFs.Handlers
             fileInfo = new FileInformation
             {
                 FileName = StatsPath.FileName,
-                Attributes = FileAttributes.Normal | FileAttributes.ReadOnly,
+                Attributes = MongoFile,
                 CreationTime = DateTime.Now,
                 Length = _mongoDb.GetStats(path.Database, path.Collection).GetJsonBytesLength()
             };
@@ -88,7 +99,7 @@ namespace MongoFs.Handlers
             fileInfo = new FileInformation
             {
                 FileName = IndexesPath.FileName,
-                Attributes = FileAttributes.Normal | FileAttributes.ReadOnly,
+                Attributes = MongoFile,
                 CreationTime = DateTime.Now,
                 Length = _mongoDb.GetIndexes(path.Database, path.Collection).GetJsonBytesLength()
             };
@@ -100,7 +111,7 @@ namespace MongoFs.Handlers
             fileInfo = new FileInformation
             {
                 FileName = DataDirectoryPath.FileName,
-                Attributes = FileAttributes.Directory | FileAttributes.ReadOnly,
+                Attributes = MongoDir,
                 CreationTime = DateTime.Now,
             };
             return NtStatus.Success;
@@ -118,14 +129,75 @@ namespace MongoFs.Handlers
             fileInfo = new FileInformation
             {
                 FileName = path.FileName,
-                Attributes = FileAttributes.Normal | FileAttributes.ReadOnly,
-                CreationTime = document.BsonDocument.TryGetCreationTimeFromId() ?? DateTime.Now,
+                Attributes = MongoFile,
+                CreationTime = document.Value.TryGetCreationTimeFromId() ?? DateTime.Now,
                 Length = path.Type switch
                 {
                     DataDocumentType.Json => document.GetJsonBytesLength(),
                     DataDocumentType.Bson => document.GetBsonBytesLength(),
                     _ => throw new ArgumentOutOfRangeException($"Unsupported path type {path.Type}")
                 }
+            };
+            return NtStatus.Success;
+        }
+
+        private NtStatus GetFileInformation(QueryDirectoryPath path, out FileInformation fileInfo)
+        {
+            fileInfo = new FileInformation
+            {
+                FileName = QueryDirectoryPath.FileName,
+                Attributes = MongoDir,
+                CreationTime = DateTime.Now
+            };
+            return NtStatus.Success;
+        }
+
+        private NtStatus GetFileInformation(QueryEmptyDirectoryPath path, out FileInformation fileInfo)
+        {
+            fileInfo = new FileInformation
+            {
+                FileName = QueryDirectoryPath.FileName,
+                Attributes = MongoDir,
+                CreationTime = DateTime.Now
+            };
+            return NtStatus.Success;
+        }
+
+        private NtStatus GetFileInformation(QueryDocumentPath path, out FileInformation fileInfo)
+        {
+            var document = _mongoDb.QueryDocumentAt(path.Database, path.Collection, path.Index, path.Field, path.Query);
+            if (document == null)
+            {
+                fileInfo = default;
+                return NtStatus.NoSuchFile;
+            }
+
+            fileInfo = new FileInformation
+            {
+                FileName = path.FileName,
+                Attributes = MongoFile,
+                CreationTime = document.Value.TryGetCreationTimeFromId() ?? DateTime.Now,
+                Length = path.Type switch
+                {
+                    DataDocumentType.Json => document.GetJsonBytesLength(),
+                    DataDocumentType.Bson => document.GetBsonBytesLength(),
+                    _ => throw new ArgumentOutOfRangeException($"Unsupported path type {path.Type}.")
+                }
+            };
+            return NtStatus.Success;
+        }
+
+        private NtStatus GetFileInformation(QueryAllDocumentsPath path, out FileInformation fileInfo)
+        {
+            var documents = _mongoDb.QueryAllDocuments(path.Database, path.Collection, path.Field, path.Query);
+            var container = new BsonContainer<BsonValue>(new BsonArray(documents.Select(d => d.Value)));
+
+            fileInfo = new FileInformation
+            {
+                FileName = QueryAllDocumentsPath.FileName,
+                Attributes = MongoFile,
+                CreationTime = DateTime.Now,
+                Length = container.GetJsonBytesLength()
             };
             return NtStatus.Success;
         }

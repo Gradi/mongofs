@@ -1,13 +1,17 @@
+using System.IO;
 using System.Runtime.CompilerServices;
 using DokanNet;
-using MongoFs.Paths;
 using Serilog;
 using Serilog.Events;
+using Path = MongoFs.Paths.Abstract.Path;
 
 namespace MongoFs.Handlers
 {
     public abstract class BaseHandler
     {
+        protected const FileAttributes MongoFile = FileAttributes.Normal | FileAttributes.ReadOnly;
+        protected const FileAttributes MongoDir = FileAttributes.Directory | FileAttributes.ReadOnly;
+
         protected readonly ILogger _logger;
         protected readonly IMongoDb _mongoDb;
 

@@ -43,18 +43,23 @@ namespace MongoFs
             _readFileHandler = readFileHandler;
         }
 
-        public NtStatus CreateFile(
-            string fileName,
-            FileAccess access,
-            FileShare share,
-            FileMode mode,
-            FileOptions options,
-            FileAttributes attributes,
-            IDokanFileInfo info)
+        public NtStatus CreateFile(string fileName, FileAccess access, FileShare share, FileMode mode, FileOptions options,
+                                   FileAttributes attributes, IDokanFileInfo info)
         {
             _logger.Verbose("CreateFile({fileName}, {access}, {share}, {mode}, {options}, {attributes} {@info}",
                 fileName, access, share, mode, options, attributes, info);
-            return NtStatus.Success;
+
+            if ( access == FileAccess.None ||
+                (access & FileAccess.ReadData) == FileAccess.ReadData ||
+                (access & FileAccess.Execute) == FileAccess.Execute ||
+                (access & FileAccess.ReadAttributes) == FileAccess.ReadAttributes ||
+                (access & FileAccess.GenericExecute) == FileAccess.GenericExecute ||
+                (access & FileAccess.GenericRead) == FileAccess.GenericRead)
+            {
+                return NtStatus.Success;
+            }
+
+            return NtStatus.NotImplemented;
         }
 
         public void Cleanup(string fileName, IDokanFileInfo info) {}
@@ -79,12 +84,7 @@ namespace MongoFs
             return _readFileHandler.ReadFile(path, buffer, out bytesRead, offset, info);
         }
 
-        public NtStatus WriteFile(
-            string fileName,
-            byte[] buffer,
-            out int bytesWritten,
-            long offset,
-            IDokanFileInfo info)
+        public NtStatus WriteFile(string fileName, byte[] buffer, out int bytesWritten, long offset, IDokanFileInfo info)
         {
             _logger.Verbose("WriteFile({fileName}, {@info}", fileName, info);
             bytesWritten = 0;
@@ -121,11 +121,8 @@ namespace MongoFs
             return _findFilesWithPatternHander.FindFilesWithPattern(path, searchPattern: null, out files, info);
         }
 
-        public NtStatus FindFilesWithPattern(
-            string fileName,
-            string searchPattern,
-            out IList<FileInformation> files,
-            IDokanFileInfo info)
+        public NtStatus FindFilesWithPattern(string fileName, string searchPattern, out IList<FileInformation> files,
+                                             IDokanFileInfo info)
         {
             _logger.Verbose("FindFilesWithPattern({fileName}, {searchPattern}, {@info})", fileName, searchPattern, info);
 

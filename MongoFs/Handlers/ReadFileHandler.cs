@@ -1,7 +1,13 @@
-using System;
 using DokanNet;
+using MongoDB.Bson;
+using MongoFs.Paths.Abstract;
+using MongoFs.Paths.Root.Database.Collection.Data;
+using MongoFs.Paths.Root.Database.Collection.Query;
+using MongoFs.Paths.Root.Database.Collection;
 using MongoFs.Paths;
 using Serilog;
+using System.Linq;
+using System;
 
 namespace MongoFs.Handlers
 {
@@ -20,10 +26,13 @@ namespace MongoFs.Handlers
             bytesRead = 0;
             return path switch
             {
-                IndexesPath p      => ReadFile(p, buffer, out bytesRead, offset),
-                StatsPath p        => ReadFile(p, buffer, out bytesRead, offset),
-                DataDocumentPath p => ReadFile(p, buffer, out bytesRead, offset),
-                var p              => LogFailure(p)
+                IndexesPath p           => ReadFile(p, buffer, out bytesRead, offset),
+                StatsPath p             => ReadFile(p, buffer, out bytesRead, offset),
+                DataDocumentPath p      => ReadFile(p, buffer, out bytesRead, offset),
+                QueryDocumentPath p     => ReadFile(p, buffer, out bytesRead, offset),
+                QueryAllDocumentsPath p => ReadFile(p, buffer, out bytesRead, offset),
+                QueryDirectoryPath p    => ReadFile(p, buffer, out bytesRead, offset),
+                var p                   => LogFailure(p)
             };
         }
 
@@ -49,6 +58,40 @@ namespace MongoFs.Handlers
                 _ => throw new ArgumentOutOfRangeException($"Unsupported path type {path.Type}.")
             };
             return ReadBuffer(sourceBytes, buffer, out bytesRead, offset);
+        }
+
+        private NtStatus ReadFile(QueryDocumentPath path, byte[] buffer, out int bytesRead, long offset)
+        {
+            var document = _mongoDb.QueryDocumentAt(path.Database, path.Collection, path.Index, path.Field, path.Query);
+            if (document == null)
+            {
+                bytesRead = 0;
+                return NtStatus.NoSuchFile;
+            }
+
+            var sourceBuffer = path.Type switch
+            {
+                DataDocumentType.Json => document.AsJsonBytes(),
+                DataDocumentType.Bson => document.AsBsonBytes(),
+                _ => throw new ArgumentOutOfRangeException($"Unsupported path type {path.Type}")
+            };
+
+            return ReadBuffer(sourceBuffer, buffer, out bytesRead, offset);
+        }
+
+        private NtStatus ReadFile(QueryAllDocumentsPath path, byte[] buffer, out int bytesRead, long offset)
+        {
+            var documents = _mongoDb.QueryAllDocuments(path.Database, path.Collection, path.Field, path.Query);
+            var container = new BsonContainer<BsonArray>(new BsonArray(documents.Select(d => d.Value)));
+
+            var sourceBuffer = container.AsJsonBytes();
+            return ReadBuffer(sourceBuffer, buffer, out bytesRead, offset);
+        }
+
+        private NtStatus ReadFile(QueryDirectoryPath path, byte[] buffer, out int bytesRead, long offset)
+        {
+            bytesRead = 0;
+            return NtStatus.NoSuchFile;
         }
 
         private NtStatus ReadBuffer(byte[] source, byte[] destination, out int bytesRead, long offset)

@@ -1,12 +1,17 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using DokanNet;
+using MongoDB.Bson;
 using MongoFs.Extensions;
-using MongoFs.Paths;
+using MongoFs.Paths.Root.Database.Collection.Data;
+using MongoFs.Paths.Root.Database.Collection.Query;
+using MongoFs.Paths.Root.Database.Collection;
+using MongoFs.Paths.Root.Database;
+using MongoFs.Paths.Root;
 using Serilog;
-using Path = MongoFs.Paths.Path;
+using System.Collections.Generic;
+using System.Linq;
+using System;
+using Path = MongoFs.Paths.Abstract.Path;
+
 
 namespace MongoFs.Handlers
 {
@@ -26,12 +31,14 @@ namespace MongoFs.Handlers
             files = Array.Empty<FileInformation>();
             return path switch
             {
-                RootPath p          => FindFilesWithPattern(p, searchPattern, out files),
-                DatabasePath p      => FindFilesWithPattern(p, searchPattern, out files),
-                CollectionPath p    => FindFilesWithPattern(p, searchPattern, out files),
-                DataDirectoryPath p => FindFilesWithPattern(p, searchPattern, out files),
+                RootPath p                => FindFilesWithPattern(p, searchPattern, out files),
+                DatabasePath p            => FindFilesWithPattern(p, searchPattern, out files),
+                CollectionPath p          => FindFilesWithPattern(p, searchPattern, out files),
+                DataDirectoryPath p       => FindFilesWithPattern(p, searchPattern, out files),
+                QueryDirectoryPath p      => FindFilesWithPattern(p, searchPattern, out files),
+                QueryEmptyDirectoryPath p => FindFilesWithPattern(p, searchPattern, out files),
 
-                var p               => LogFailure(path)
+                var p                     => LogFailure(path)
             };
         }
 
@@ -40,7 +47,7 @@ namespace MongoFs.Handlers
             files = _mongoDb.GetDatabases().Select(db => new FileInformation
             {
                 FileName = db,
-                Attributes = FileAttributes.Directory | FileAttributes.ReadOnly,
+                Attributes = MongoDir,
                 CreationTime = DateTime.Now,
             })
             .FilterWithGlobPattern(searchPattern)
@@ -53,7 +60,7 @@ namespace MongoFs.Handlers
             files = _mongoDb.GetCollections(path.Database).Select(coll => new FileInformation
             {
                 FileName = coll,
-                Attributes = FileAttributes.Directory | FileAttributes.ReadOnly,
+                Attributes = MongoDir,
                 CreationTime = DateTime.Now,
             })
             .FilterWithGlobPattern(searchPattern)
@@ -69,21 +76,27 @@ namespace MongoFs.Handlers
                 new FileInformation
                 {
                     FileName = StatsPath.FileName,
-                    Attributes = FileAttributes.Normal | FileAttributes.ReadOnly,
+                    Attributes = MongoFile,
                     CreationTime = now,
                     Length = _mongoDb.GetStats(path.Database, path.Collection).GetJsonBytesLength()
                 },
                 new FileInformation
                 {
                     FileName = IndexesPath.FileName,
-                    Attributes = FileAttributes.Normal | FileAttributes.ReadOnly,
+                    Attributes = MongoFile,
                     CreationTime = now,
                     Length = _mongoDb.GetIndexes(path.Database, path.Collection).GetJsonBytesLength()
                 },
                 new FileInformation
                 {
                     FileName = DataDirectoryPath.FileName,
-                    Attributes = FileAttributes.Directory | FileAttributes.ReadOnly,
+                    Attributes = MongoDir,
+                    CreationTime = now
+                },
+                new FileInformation
+                {
+                    FileName = QueryDirectoryPath.FileName,
+                    Attributes = MongoDir,
                     CreationTime = now
                 }
             };
@@ -105,21 +118,21 @@ namespace MongoFs.Handlers
                 .Select(document =>
                 {
                     var index = document.Index.ToString();
-                    var creationTime = document.Item.BsonDocument.TryGetCreationTimeFromId() ?? now;
-                    var attributes = FileAttributes.Normal | FileAttributes.ReadOnly;
+                    var creationTime = document.Item.Value.TryGetCreationTimeFromId() ?? now;
+
                     return
                         (
                             new FileInformation
                             {
                                 FileName = $"{index}.json",
-                                Attributes = attributes,
+                                Attributes = MongoFile,
                                 CreationTime = creationTime,
                                 Length = document.Item.GetJsonBytesLength(),
                             },
                             new FileInformation
                             {
                                 FileName = $"{index}.bson",
-                                Attributes = attributes,
+                                Attributes = MongoFile,
                                 CreationTime = creationTime,
                                 Length = document.Item.GetBsonBytesLength()
                             }
@@ -131,5 +144,61 @@ namespace MongoFs.Handlers
 
             return NtStatus.Success;
         }
+
+        private NtStatus FindFilesWithPattern(QueryDirectoryPath path, string? searchPattern, out IList<FileInformation> files)
+        {
+            var now = DateTime.Now;
+
+            var documents = _mongoDb
+                .QueryAllDocuments(path.Database, path.Collection, path.Field, path.Query)
+                .ToList();
+
+            var allItems = new BsonContainer<BsonArray>(new BsonArray(documents.Select(d => d.Value)));
+
+            files = documents
+                .WithIndexes()
+                .Select(document =>
+                {
+                    var index = document.Index.ToString();
+                    var creationTime = document.Item.Value.TryGetCreationTimeFromId() ?? now;
+
+                    return
+                        (
+                            new FileInformation
+                            {
+                                FileName = $"{index}.json",
+                                Attributes = MongoFile,
+                                CreationTime = creationTime,
+                                Length = document.Item.GetJsonBytesLength()
+                            },
+                            new FileInformation
+                            {
+                                FileName = $"{index}.bson",
+                                Attributes = MongoFile,
+                                CreationTime = creationTime,
+                                Length = document.Item.GetBsonBytesLength()
+                            }
+                        );
+                })
+                .Untuple()
+                .Prepend(new FileInformation
+                {
+                    FileName = QueryAllDocumentsPath.FileName,
+                    CreationTime = DateTime.Now,
+                    Attributes = MongoFile,
+                    Length = allItems.GetJsonBytesLength()
+                })
+                .FilterWithGlobPattern(searchPattern)
+                .ToList();
+
+            return NtStatus.Success;
+        }
+
+        private NtStatus FindFilesWithPattern(QueryEmptyDirectoryPath path, string? searchPattern, out IList<FileInformation> files)
+        {
+            files = new List<FileInformation>();
+            return NtStatus.Success;
+        }
+
     }
 }
