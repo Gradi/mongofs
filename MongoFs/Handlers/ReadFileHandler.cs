@@ -8,6 +8,7 @@ using MongoFs.Paths;
 using Serilog;
 using System.Linq;
 using System;
+using MongoFs.Paths.Root;
 
 namespace MongoFs.Handlers
 {
@@ -28,6 +29,11 @@ namespace MongoFs.Handlers
             {
                 IndexesPath p           => ReadFile(p, buffer, out bytesRead, offset),
                 StatsPath p             => ReadFile(p, buffer, out bytesRead, offset),
+                CurrentOpPath p         => ReadFile(p, buffer, out bytesRead, offset),
+                ServerStatusPath p      => ReadFile(p, buffer, out bytesRead, offset),
+                BuildInfoPath p         => ReadFile(p, buffer, out bytesRead, offset),
+                HostInfoPath p          => ReadFile(p, buffer, out bytesRead, offset),
+                ListCommandsPath p      => ReadFile(p, buffer, out bytesRead, offset),
                 DataDocumentPath p      => ReadFile(p, buffer, out bytesRead, offset),
                 QueryDocumentPath p     => ReadFile(p, buffer, out bytesRead, offset),
                 QueryAllDocumentsPath p => ReadFile(p, buffer, out bytesRead, offset),
@@ -41,6 +47,21 @@ namespace MongoFs.Handlers
 
         private NtStatus ReadFile(StatsPath path, byte[] buffer, out int bytesRead, long offset) =>
             ReadBuffer(_mongoDb.GetStats(path.Database, path.Collection).AsJsonBytes(), buffer, out bytesRead, offset);
+
+        private NtStatus ReadFile(CurrentOpPath path, byte[] buffer, out int bytesRead, long offset) =>
+            ReadBuffer(_mongoDb.GetCurrentOp().AsJsonBytes(), buffer, out bytesRead, offset);
+
+        private NtStatus ReadFile(ServerStatusPath path, byte[] buffer, out int bytesRead, long offset) =>
+            ReadBuffer(_mongoDb.GetServerStatus().AsJsonBytes(), buffer, out bytesRead, offset);
+
+        private NtStatus ReadFile(BuildInfoPath path, byte[] buffer, out int bytesRead, long offset) =>
+            ReadBuffer(_mongoDb.GetBuildInfo().AsJsonBytes(), buffer, out bytesRead, offset);
+
+        private NtStatus ReadFile(HostInfoPath path, byte[] buffer, out int bytesRead, long offset) =>
+            ReadBuffer(_mongoDb.GetHostInfo().AsJsonBytes(), buffer, out bytesRead, offset);
+
+        private NtStatus ReadFile(ListCommandsPath path, byte[] buffer, out int bytesRead, long offset) =>
+            ReadBuffer(_mongoDb.GetListCommands().AsJsonBytes(), buffer, out bytesRead, offset);
 
         private NtStatus ReadFile(DataDocumentPath path, byte[] buffer, out int bytesRead, long offset)
         {

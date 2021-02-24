@@ -53,9 +53,23 @@ namespace MongoFs.Paths
             return LogFailure(pathStr);
         }
 
-        // /database
-        private Path? ParseDatabasePath(string inputStr, string database) =>
-            database.IsValidDbOrCollName() ? new DatabasePath(database) : LogFailure(inputStr, "Invalid database name.");
+        // /
+        //     /database
+        //     /currentOp.json
+        //     /serverStatus.json
+        //     /buildInfo.json
+        //     /hostInfo.json
+        //     /listCommands.json
+        private Path? Parse1SegmentPath(string inputStr, string segment) => segment switch
+        {
+            CurrentOpPath.FileName => new CurrentOpPath(),
+            ServerStatusPath.FileName => new ServerStatusPath(),
+            BuildInfoPath.FileName => new BuildInfoPath(),
+            HostInfoPath.FileName => new HostInfoPath(),
+            ListCommandsPath.FileName => new ListCommandsPath(),
+            var val when val.IsValidDbOrCollName() => new DatabasePath(val),
+            _ => LogFailure(inputStr)
+        };
 
         // /database/collection
         private Path? ParseCollectionPath(string inputStr, string database, string collection) =>

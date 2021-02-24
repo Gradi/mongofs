@@ -5,6 +5,16 @@ namespace MongoFs
 {
     public interface IMongoDb
     {
+        BsonContainer<BsonDocument> GetCurrentOp();
+
+        BsonContainer<BsonDocument> GetServerStatus();
+
+        BsonContainer<BsonDocument> GetBuildInfo();
+
+        BsonContainer<BsonDocument> GetHostInfo();
+
+        BsonContainer<BsonDocument> GetListCommands();
+
         IEnumerable<string> GetDatabases();
 
         IEnumerable<string> GetCollections(string db);

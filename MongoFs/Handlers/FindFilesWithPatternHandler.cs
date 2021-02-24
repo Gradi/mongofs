@@ -44,14 +44,52 @@ namespace MongoFs.Handlers
 
         private NtStatus FindFilesWithPattern(RootPath _, string? searchPattern, out IList<FileInformation> files)
         {
-            files = _mongoDb.GetDatabases().Select(db => new FileInformation
-            {
-                FileName = db,
-                Attributes = MongoDir,
-                CreationTime = DateTime.Now,
-            })
-            .FilterWithGlobPattern(searchPattern)
-            .ToList();
+            var now = DateTime.Now;
+
+            files = _mongoDb.GetDatabases()
+                .Select(db => new FileInformation
+                {
+                    FileName = db,
+                    Attributes = MongoDir,
+                    CreationTime = now,
+                })
+                .Append(new FileInformation
+                {
+                    FileName = CurrentOpPath.FileName,
+                    Attributes = MongoFile,
+                    CreationTime = now,
+                    Length = _mongoDb.GetCurrentOp().GetJsonBytesLength()
+                })
+                .Append(new FileInformation
+                {
+                    FileName = ServerStatusPath.FileName,
+                    Attributes = MongoFile,
+                    CreationTime = now,
+                    Length = _mongoDb.GetServerStatus().GetJsonBytesLength()
+                })
+                .Append(new FileInformation
+                {
+                    FileName = BuildInfoPath.FileName,
+                    Attributes = MongoFile,
+                    CreationTime = now,
+                    Length = _mongoDb.GetBuildInfo().GetJsonBytesLength()
+                })
+                .Append(new FileInformation
+                {
+                    FileName = HostInfoPath.FileName,
+                    Attributes = MongoFile,
+                    CreationTime = now,
+                    Length = _mongoDb.GetHostInfo().GetJsonBytesLength()
+                })
+                .Append(new FileInformation
+                {
+                    FileName = ListCommandsPath.FileName,
+                    Attributes = MongoFile,
+                    CreationTime = now,
+                    Length = _mongoDb.GetListCommands().GetJsonBytesLength()
+                })
+                .FilterWithGlobPattern(searchPattern)
+                .ToList();
             return NtStatus.Success;
         }
 

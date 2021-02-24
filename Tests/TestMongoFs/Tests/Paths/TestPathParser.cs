@@ -40,6 +40,16 @@ namespace TestMongoFs.Tests.Paths
         }
 
         [Test]
+        public void Test0SegmentsPaths()
+        {
+            AssertResult<CurrentOpPath>("/currentOp.json", _ => {});
+            AssertResult<ServerStatusPath>("/serverStatus.json", _ => {});
+            AssertResult<BuildInfoPath>("/buildInfo.json", _ => {});
+            AssertResult<HostInfoPath>("/hostInfo.json", _ => {});
+            AssertResult<ListCommandsPath>("/listCommands.json", _ => {});
+        }
+
+        [Test]
         public void TestCollectionPath()
         {
             var (db, collection) = GenRandomDbColl();

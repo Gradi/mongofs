@@ -17,6 +17,32 @@ namespace MongoFs
             _client = new MongoClient(connectionString);
         }
 
+        public BsonContainer<BsonDocument> GetCurrentOp() => RunAdminCommand(new BsonDocument
+            {
+                { "currentOp", true },
+                { "$all", true }
+            });
+
+        public BsonContainer<BsonDocument> GetServerStatus() => RunAdminCommand(new BsonDocument
+            {
+                { "serverStatus", 1 }
+            });
+
+        public BsonContainer<BsonDocument> GetBuildInfo() => RunAdminCommand(new BsonDocument
+            {
+                { "buildInfo", 1 }
+            });
+
+        public BsonContainer<BsonDocument> GetHostInfo() => RunAdminCommand(new BsonDocument
+            {
+                { "hostInfo", 1 }
+            });
+
+        public BsonContainer<BsonDocument> GetListCommands() => RunAdminCommand(new BsonDocument
+            {
+                { "listCommands", 1 }
+            });
+
         public IEnumerable<string> GetDatabases() =>
             _client.ListDatabaseNames().ToList();
 
@@ -119,6 +145,9 @@ namespace MongoFs
                 .ToEnumerable()
                 .Select(d => new BsonContainer<BsonDocument>(d));
         }
+
+        private BsonContainer<BsonDocument> RunAdminCommand(BsonDocument command) =>
+            new BsonContainer<BsonDocument>(_client.GetDatabase("admin").RunCommand<BsonDocument>(command));
 
         private FilterDefinition<BsonDocument> QueryToFilter(string field, string query)
         {

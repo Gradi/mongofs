@@ -9,7 +9,6 @@ using MongoFs.Paths.Root;
 using MongoFs.Paths;
 using Serilog;
 using System.Linq;
-using System.Text;
 using System;
 using Path = MongoFs.Paths.Abstract.Path;
 
@@ -41,6 +40,11 @@ namespace MongoFs.Handlers
                 // Files
                 StatsPath p               => GetFileInformation(p, out fileInfo),
                 IndexesPath p             => GetFileInformation(p, out fileInfo),
+                CurrentOpPath p           => GetFileInformation(p, out fileInfo),
+                ServerStatusPath p        => GetFileInformation(p, out fileInfo),
+                BuildInfoPath p           => GetFileInformation(p, out fileInfo),
+                HostInfoPath p            => GetFileInformation(p, out fileInfo),
+                ListCommandsPath p        => GetFileInformation(p, out fileInfo),
                 DataDocumentPath p        => GetFileInformation(p, out fileInfo),
                 QueryDocumentPath p       => GetFileInformation(p, out fileInfo),
                 QueryAllDocumentsPath p   => GetFileInformation(p, out fileInfo),
@@ -102,6 +106,66 @@ namespace MongoFs.Handlers
                 Attributes = MongoFile,
                 CreationTime = DateTime.Now,
                 Length = _mongoDb.GetIndexes(path.Database, path.Collection).GetJsonBytesLength()
+            };
+            return NtStatus.Success;
+        }
+
+        private NtStatus GetFileInformation(CurrentOpPath path, out FileInformation fileInfo)
+        {
+            fileInfo = new FileInformation
+            {
+                FileName = CurrentOpPath.FileName,
+                Attributes = MongoFile,
+                CreationTime = DateTime.Now,
+                Length = _mongoDb.GetCurrentOp().GetJsonBytesLength()
+            };
+            return NtStatus.Success;
+        }
+
+        private NtStatus GetFileInformation(ServerStatusPath path, out FileInformation fileInfo)
+        {
+            fileInfo = new FileInformation
+            {
+                FileName = ServerStatusPath.FileName,
+                Attributes = MongoFile,
+                CreationTime = DateTime.Now,
+                Length = _mongoDb.GetServerStatus().GetJsonBytesLength()
+            };
+            return NtStatus.Success;
+        }
+
+        private NtStatus GetFileInformation(BuildInfoPath path, out FileInformation fileInfo)
+        {
+            fileInfo = new FileInformation
+            {
+                FileName = BuildInfoPath.FileName,
+                Attributes = MongoFile,
+                CreationTime = DateTime.Now,
+                Length = _mongoDb.GetBuildInfo().GetJsonBytesLength()
+            };
+            return NtStatus.Success;
+        }
+
+        private NtStatus GetFileInformation(HostInfoPath path, out FileInformation fileInfo)
+        {
+            fileInfo = new FileInformation
+            {
+                FileName = HostInfoPath.FileName,
+                Attributes = MongoFile,
+                CreationTime = DateTime.Now,
+                Length = _mongoDb.GetHostInfo().GetJsonBytesLength()
+            };
+            return NtStatus.Success;
+        }
+
+        private NtStatus GetFileInformation(ListCommandsPath path, out FileInformation fileInfo)
+        {
+            fileInfo = new FileInformation
+            {
+                FileName = ListCommandsPath.FileName,
+                Attributes = MongoFile,
+                CreationTime = DateTime.Now,
+                Length = _mongoDb.GetListCommands().GetJsonBytesLength()
             };
             return NtStatus.Success;
         }

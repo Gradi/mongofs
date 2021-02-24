@@ -1,6 +1,7 @@
 MongoFs is a Dokany app that mounts mongodb's content as filesystem.
 
 / -- lists databases
+/currenOp.json -- current operations
 
 /database -- lists collections in 'database' database.
 
