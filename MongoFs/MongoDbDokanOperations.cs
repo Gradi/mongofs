@@ -115,7 +115,7 @@ namespace MongoFs
             var path = _pathParser.Parse(fileName);
             if (path == null)
             {
-                files = Array.Empty<FileInformation>();
+                files = new List<FileInformation>();
                 return NtStatus.Error;
             }
 
@@ -130,7 +130,7 @@ namespace MongoFs
             var path = _pathParser.Parse(fileName);
             if (path == null)
             {
-                files = Array.Empty<FileInformation>();
+                files = new List<FileInformation>();
                 return NtStatus.Error;
             }
 
