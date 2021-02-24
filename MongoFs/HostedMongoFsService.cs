@@ -45,6 +45,7 @@ namespace MongoFs
                         (
                             _commandLineArguments.MountPoint,
                             DokanOptions.WriteProtection,
+                            _commandLineArguments.ThreadCount,
                             _dokanLogger
                         );
                 }

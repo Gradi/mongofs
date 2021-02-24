@@ -29,7 +29,7 @@ namespace MongoFs.Handlers
         {
             if (_logger.IsEnabled(LogEventLevel.Information))
             {
-                _logger.Information("Handler for combination ({MethodName}, {PathType}) is not implemented.",
+                _logger.Debug("Handler for combination ({MethodName}, {PathType}) is not implemented.",
                     callerName, path.GetType());
             }
             return NtStatus.NotImplemented;
