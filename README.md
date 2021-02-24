@@ -81,7 +81,7 @@ All paths below are related to *collection* collection in *database* database.
 | Path          | Description                   |
 |---------------|-------------------------------|
 | \indexes.json | Collection indexes            |
-| \stats.json   | Collection indexes            |
+| \stats.json   | Collection stats              |
 | \data         | All documents of collection   |
 | \query        | Folder for querying documents |
 
